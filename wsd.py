@@ -44,8 +44,10 @@ def wsd(model_name='distilbert-base-uncased',
     use_n_last_layers = 1
     if classifier_input == 'token-embedding-last-layer':
         use_n_last_layers = 1
-    elif classifier_input.startswith('token-embedding-') and classifier_input.endswith('-last-layers'):
-        use_n_last_layers = int(classifier_input.replace('token-embedding-',"").replace('-last-layers',""))
+    elif classifier_input.startswith('token-embedding-last-') and classifier_input.endswith('-layers'):
+        use_n_last_layers = int(classifier_input.replace('token-embedding-last-',"").replace('-layers',""))
+    else:
+        raise ValueError("Invalid classifier_input argument")
     print("Using the last %d layers" % use_n_last_layers)
 
     def tokenize(str):
@@ -80,8 +82,17 @@ def wsd(model_name='distilbert-base-uncased',
     trn, vld = dataset.split(0.7, stratified=True, strata_field='sense')
 
     TEXT.build_vocab([])
-    TEXT.vocab.stoi = tokenizer.vocab
-    TEXT.vocab.itos = list(tokenizer.vocab)
+    if model_name.startswith('albert'):
+        class Mapping:
+            def __init__(self, fn):
+                self.fn = fn
+            def __getitem__(self, item):
+                return self.fn(item)
+        TEXT.vocab.stoi = Mapping(tokenizer.sp_model.PieceToId)
+        TEXT.vocab.itos = Mapping(tokenizer.sp_model.IdToPiece)
+    else:
+        TEXT.vocab.stoi = tokenizer.vocab
+        TEXT.vocab.itos = list(tokenizer.vocab)
     SENSE.build_vocab(trn)
     LEMMA.build_vocab(trn)
 

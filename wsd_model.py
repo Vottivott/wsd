@@ -53,7 +53,7 @@ class WSDModel(nn.Module):
 
 
 def get_base_output_size(base_model, base_model_name):
-    if base_model_name.startswith('bert'):
-        return base_model.config.hidden_size
-    else:
+    if base_model_name.startswith('distilbert'):
         return base_model.config.dim
+    else:
+        return base_model.config.hidden_size
