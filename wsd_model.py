@@ -32,11 +32,16 @@ class WSDModel(nn.Module):
         """
         base_model_output = self.base_model(x)
         hidden_states = base_model_output[-1][-self.use_n_last_layers:] # Because we have set config.output_hidden_states=True and config.output_attentions=False
+        print("number of hidden states: %d" % len(base_model_output[-1]))
+        print("number of hidden cut-out states: %d" % len(hidden_states))
+        print("self.use_n_last_layers = %d" % self.use_n_last_layers)
         hidden_states_for_relevant_token = []
         for layer in hidden_states:
             hidden_state_for_relevant_token = layer[list(range(len(token_positions))),token_positions,:]
+            print("  hidden_state_for_relevant_token.shape: " + str(hidden_state_for_relevant_token.shape))
             hidden_states_for_relevant_token.append(hidden_state_for_relevant_token)
         features_for_relevant_token = torch.cat(hidden_states_for_relevant_token, 1) # Concatenate the last n hidden layers along the neuron dimension
+        print("features_for_relevant_token.shape: " + str(features_for_relevant_token))
 
         if save_embeddings:
             return features_for_relevant_token
