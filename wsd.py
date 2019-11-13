@@ -114,7 +114,7 @@ def wsd(model_name='distilbert-base-uncased',
             print("Saving %s embeddings for %s..." % (name,model_name))
             for i,batch in enumerate(iter):
                 if i<10:
-                    print(SENSE.vocab.itos[batch.sense])
+                    print(SENSE.vocab.itos[batch.sense[0]])
                 print('.', end='')
                 sys.stdout.flush()
                 text = batch.text.t()
