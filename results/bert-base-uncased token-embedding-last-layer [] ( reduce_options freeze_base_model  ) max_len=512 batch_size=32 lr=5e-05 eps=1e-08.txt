@@ -1,0 +1,1 @@
+defaultdict(<class 'list'>, {'train_loss': [3.555590392448581], 'val_loss': [2.1611976126133143], 'val_acc': [0.6342756958141573]})
