@@ -4,7 +4,7 @@ from collections import defaultdict
 import random
 import torch
 from torchtext.data import Field, LabelField, TabularDataset, Iterator, BucketIterator, Example, Dataset
-from transformers import AdamW, DistilBertTokenizer, DistilBertModel
+from transformers.transformers import AdamW, DistilBertTokenizer, DistilBertModel
 
 from wsd_model import WSDModel
 
