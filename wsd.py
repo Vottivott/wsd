@@ -112,8 +112,7 @@ def wsd(model_name='distilbert-base-uncased',
         tst = read_data(test_path, fields, max_len=512)
         tst_iter = Iterator(tst, device=device, batch_size=batch_size, sort=False, sort_within_batch=False,
                             repeat=False, train=False)
-        #iters = [('trn',trn_iter),('vld',vld_iter),('tst',tst_iter)]
-        iters = [('tst',tst_iter)]
+        iters = [('trn',trn_iter),('vld',vld_iter),('tst',tst_iter)]
         model.eval()
         for name,iter in iters:
             print("Saving %s embeddings for %s..." % (name,model_name))
