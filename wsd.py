@@ -16,7 +16,8 @@ def wsd(model_name='distilbert-base-uncased',
         freeze_base_model=True,
         max_len=512,
         batch_size=32,
-        save_embeddings=False, # If true, instead of training the program generates embeddings for all training, validation and test examples
+        save_embeddings=False, # If true, instead of training the program generates embeddings for all training, validation and test examples. Also saves labels
+        load_embeddings=False, # If true, preembedded batches are used instead of running the base mode. Also uses saved labels
         test=False,
         lr=5e-5,
         eps=1e-8,
@@ -29,19 +30,20 @@ def wsd(model_name='distilbert-base-uncased',
     import __main__ as main
     print("Script: " + os.path.basename(main.__file__))
 
-    print("Loading base model %s..." % model_name)
-    if model_name.startswith('distilbert'):
-        tokenizer = DistilBertTokenizer.from_pretrained(model_name)
-        base_model = DistilBertModel.from_pretrained(model_name, num_labels=n_classes, output_hidden_states=True, output_attentions=False)
-    elif model_name.startswith('bert'):
-        from transformers import BertTokenizer, BertModel
-        tokenizer = BertTokenizer.from_pretrained(model_name)
-        base_model = BertModel.from_pretrained(model_name, num_labels=n_classes, output_hidden_states=True, output_attentions=False)
-    elif model_name.startswith('albert'):
-        from transformers import AlbertTokenizer
-        from transformers.modeling_albert import AlbertModel
-        tokenizer = AlbertTokenizer.from_pretrained(model_name)
-        base_model = AlbertModel.from_pretrained(model_name, output_hidden_states=True, output_attentions=False)
+    if not load_embeddings:
+        print("Loading base model %s..." % model_name)
+        if model_name.startswith('distilbert'):
+            tokenizer = DistilBertTokenizer.from_pretrained(model_name)
+            base_model = DistilBertModel.from_pretrained(model_name, num_labels=n_classes, output_hidden_states=True, output_attentions=False)
+        elif model_name.startswith('bert'):
+            from transformers import BertTokenizer, BertModel
+            tokenizer = BertTokenizer.from_pretrained(model_name)
+            base_model = BertModel.from_pretrained(model_name, num_labels=n_classes, output_hidden_states=True, output_attentions=False)
+        elif model_name.startswith('albert'):
+            from transformers import AlbertTokenizer
+            from transformers.modeling_albert import AlbertModel
+            tokenizer = AlbertTokenizer.from_pretrained(model_name)
+            base_model = AlbertModel.from_pretrained(model_name, output_hidden_states=True, output_attentions=False)
 
     use_n_last_layers = 1
     if classifier_input == 'token-embedding-last-layer':
@@ -122,12 +124,18 @@ def wsd(model_name='distilbert-base-uncased',
                 sys.stdout.flush()
                 text = batch.text.t()
                 with torch.no_grad():
+                    """
                     batch_features = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense, save_embeddings=True)
                     batch_features = batch_features.cpu().numpy()
                     directory = "embeddings/" + model_name + " " + classifier_input + "/" + name
                     if not os.path.exists(directory):
                         os.makedirs(directory)
                     np.save(directory + "/" + str(i) + ".npy", batch_features)
+                    """
+                    directory_labels = "embeddings/" + model_name + " " + classifier_input + "/" + name + " labels"
+                    if not os.path.exists(directory_labels):
+                        os.makedirs(directory_labels)
+                    np.save(directory_labels + "/" + str(i) + ".npy", batch.sense)
         print("Finished saving embeddings!")
         exit(0)
     else:
