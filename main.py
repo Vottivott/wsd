@@ -1,11 +1,11 @@
 import torch
 
-from transformers import AlbertTokenizer
-from transformers.modeling_albert import AlbertModel
+#from transformers import AlbertTokenizer
+#from transformers.modeling_albert import AlbertModel
 
-model_name = "albert-xxlarge-v2"
-tokenizer = AlbertTokenizer.from_pretrained(model_name)
-model = AlbertModel.from_pretrained(model_name)
+#model_name = "albert-xxlarge-v2"
+#tokenizer = AlbertTokenizer.from_pretrained(model_name)
+#model = AlbertModel.from_pretrained(model_name)
 
 
 
