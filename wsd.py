@@ -10,6 +10,7 @@ from wsd_model import WSDModel
 
 def wsd(model_name='distilbert-base-uncased',
         classifier_input='token-embedding-last-4-layers', # token-embedding-last-layer / token-embedding-last-n-layers
+        classifier_hidden_layers=[],
         reduce_options=True,
         freeze_base_model=True,
         max_len=512,
@@ -105,11 +106,11 @@ def wsd(model_name='distilbert-base-uncased',
         def mask(batch_logits, batch_lemmas):
             return batch_logits
 
-    model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name)
+    model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers)
 
     model.cuda()
 
-    experiment_name = model_name + " " + classifier_input +  " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps)
+    experiment_name = model_name + " " + classifier_input + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps)
     print("Starting experiment  " + experiment_name)
     if test:
         tst = read_data(test_path, fields, max_len=512)

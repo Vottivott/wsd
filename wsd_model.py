@@ -6,10 +6,19 @@ from torch import nn
     using the output or hidden layers associated with a specified token position
 """
 class WSDModel(nn.Module):
-    def __init__(self, base_model, num_labels, logits_mask_fn, use_n_last_layers=1, base_model_name=""):
+    def __init__(self, base_model, num_labels, logits_mask_fn, use_n_last_layers=1, base_model_name="", classifier_hidden_layers=[]):
         super(WSDModel, self).__init__()
         self.base_model = base_model
-        self.classifier = nn.Linear(self.base_model.config.dim * use_n_last_layers, num_labels)
+        if len(classifier_hidden_layers) == 0:
+            self.classifier = nn.Linear(self.base_model.config.dim * use_n_last_layers, num_labels)
+        else:
+            layer_sizes = [self.base_model.config.dim * use_n_last_layers] + classifier_hidden_layers
+            layers = sum([[nn.Linear(s1,s2), nn.ReLU()] for s1,s2 in zip(layer_sizes,layer_sizes[1:])],[])
+            layers += nn.Linear(layer_sizes[-1], num_labels)
+            self.classifier = nn.Sequential(*layers)
+            print("Using classifier " + str(classifier_hidden_layers) + ":")
+            print(self.classifier)
+            print()
         self.num_labels = num_labels
         self.logits_mask_fn = logits_mask_fn
         self.use_n_last_layers = 1
