@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import time
 from collections import defaultdict
 import random
@@ -23,6 +23,9 @@ def wsd(model_name='distilbert-base-uncased',
     test_path = "wsd_test_blind.txt"
     n_classes = 222
     device = 'cuda'
+
+    import __main__ as main
+    print("Script: " + os.path.basename(main.__file__))
 
     print("Loading base model %s..." % model_name)
     if model_name.startswith('distilbert'):

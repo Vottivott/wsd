@@ -16,7 +16,7 @@ class WSDModel(nn.Module):
         else:
             layer_sizes = [base_output_size * use_n_last_layers] + classifier_hidden_layers
             layers = sum([[nn.Linear(s1,s2), nn.ReLU()] for s1,s2 in zip(layer_sizes,layer_sizes[1:])],[])
-            layers += nn.Linear(layer_sizes[-1], num_labels)
+            layers += [nn.Linear(layer_sizes[-1], num_labels)]
             self.classifier = nn.Sequential(*layers)
             print("Using classifier " + str(classifier_hidden_layers) + ":")
             print(self.classifier)
