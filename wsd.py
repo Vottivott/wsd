@@ -16,7 +16,8 @@ def wsd(model_name='distilbert-base-uncased',
         batch_size=32,
         test=False,
         lr=5e-5,
-        eps=1e-8):
+        eps=1e-8,
+        n_epochs=60):
     train_path = "wsd_train.txt"
     test_path = "wsd_test_blind.txt"
     n_classes = 222
@@ -136,7 +137,7 @@ def wsd(model_name='distilbert-base-uncased',
         def save_results(history):
             with open("results/" + experiment_name + ".txt", "w") as out:
                 out.write(str(history))
-        n_epochs = 1000
+
         train(model, optimizer, trn_iter, vld_iter, n_epochs, save_results)
 
 def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
