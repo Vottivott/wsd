@@ -26,7 +26,7 @@ class WSDModel(nn.Module):
         self.use_n_last_layers = 1
         self.base_model_name = base_model_name
 
-    def forward(self, x, token_positions=None, lemmas=None, labels=None):
+    def forward(self, x, token_positions=None, lemmas=None, labels=None, save_embeddings=False):
         """
         :param token_positions: The position of the token we want to query the sense of, for each batch
         """
@@ -37,6 +37,9 @@ class WSDModel(nn.Module):
             hidden_state_for_relevant_token = layer[list(range(len(token_positions))),token_positions,:]
             hidden_states_for_relevant_token.append(hidden_state_for_relevant_token)
         features_for_relevant_token = torch.cat(hidden_states_for_relevant_token, 1) # Concatenate the last n hidden layers along the neuron dimension
+
+        if save_embeddings:
+            return features_for_relevant_token
 
         logits = self.classifier(features_for_relevant_token)
         logits = self.logits_mask_fn(logits, lemmas)

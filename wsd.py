@@ -5,6 +5,7 @@ import random
 import torch
 from torchtext.data import Field, LabelField, TabularDataset, Iterator, BucketIterator, Example, Dataset
 from transformers import AdamW, DistilBertTokenizer, DistilBertModel
+import numpy as np
 
 from wsd_model import WSDModel
 
@@ -15,6 +16,7 @@ def wsd(model_name='distilbert-base-uncased',
         freeze_base_model=True,
         max_len=512,
         batch_size=32,
+        save_embeddings=False, # If true, instead of training the program generates embeddings for all training, validation and test examples
         test=False,
         lr=5e-5,
         eps=1e-8,
@@ -96,66 +98,93 @@ def wsd(model_name='distilbert-base-uncased',
     SENSE.build_vocab(trn)
     LEMMA.build_vocab(trn)
 
-    trn_iter = BucketIterator(trn, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=True, sort=True)
-    vld_iter = BucketIterator(vld, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=False, sort=True)
-
-    if freeze_base_model:
-        for mat in base_model.parameters():
-            mat.requires_grad = False # Freeze Bert model so that we only train the classifier on top
-
-    if reduce_options:
-        lemma_mask = defaultdict(lambda: torch.zeros(len(SENSE.vocab), device=device))
-        for example in trn:
-            lemma = LEMMA.vocab.stoi[example.lemma]
-            sense = SENSE.vocab.stoi[example.sense]
-            lemma_mask[lemma][sense] = 1
-        lemma_mask = dict(lemma_mask)
-
-        def mask(batch_logits, batch_lemmas): # Masks out the senses that do not belong to the specified lemma
-            for batch_i in range(len(batch_logits)):
-                lemma = batch_lemmas[batch_i].item()
-                batch_logits[batch_i, :] *= lemma_mask[lemma]
-            return batch_logits
-    else:
-        def mask(batch_logits, batch_lemmas):
-            return batch_logits
-
-    model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers)
-
-    model.cuda()
-
-    experiment_name = model_name + " " + classifier_input + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps)
-    print("Starting experiment  " + experiment_name)
-    if test:
+    if save_embeddings:
+        model = WSDModel(base_model, n_classes, lambda a,b:a, use_n_last_layers, model_name, classifier_hidden_layers)
+        model.cuda()
+        trn_iter = Iterator(trn, device=device, batch_size=batch_size, sort=False, sort_within_batch=False,
+                            repeat=False, train=False)
+        vld_iter = Iterator(vld, device=device, batch_size=batch_size, sort=False, sort_within_batch=False,
+                            repeat=False, train=False)
         tst = read_data(test_path, fields, max_len=512)
-        tst_iter = Iterator(tst, device=device, batch_size=batch_size, sort=False, sort_within_batch=False, repeat=False, train=False)
-        batch_predictions = []
-        for batch in tst_iter:
-            print('.', end='')
-            sys.stdout.flush()
-            text = batch.text.t()
-            with torch.no_grad():
-                outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma)
-                scores = outputs[-1]
-            batch_predictions.append(scores.argmax(dim=1))
-        batch_preds = torch.cat(batch_predictions, 0).tolist()
-        predicted_senses = [SENSE.vocab.itos(pred) for pred in batch_preds]
-        with open("test_predictions/"+experiment_name+".txt", "w") as out:
-            out.write("\n".join(predicted_senses))
+        tst_iter = Iterator(tst, device=device, batch_size=batch_size, sort=False, sort_within_batch=False,
+                            repeat=False, train=False)
+        iters = [('trn',trn_iter),('vld',vld_iter),('tst',tst_iter)]
+        model.eval()
+        for name,iter in iters:
+            print("Saving %s embeddings for %s..." % (name,model_name))
+            for i,batch in enumerate(iter):
+                if i<10:
+                    print(SENSE.vocab.itos[batch.sense])
+                print('.', end='')
+                sys.stdout.flush()
+                text = batch.text.t()
+                with torch.no_grad():
+                    batch_features = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense, save_embeddings=True)
+                    batch_features = batch_features.cpu().numpy()
+                    np.save("embeddings/" + model_name + "/" + name + "/" + str(i) + ".npy", batch_features)
+        print("Finished saving embeddings!")
+        exit(0)
     else:
-        no_decay = ['bias', 'LayerNorm.weight']
-        decay = 0.01
-        optimizer_grouped_parameters = [
-            {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
-             'weight_decay': decay},
-            {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-        ]
-        optimizer = AdamW(optimizer_grouped_parameters, lr=lr, eps=eps)
-        def save_results(history):
-            with open("results/" + experiment_name + ".txt", "w") as out:
-                out.write(str(history))
+        trn_iter = BucketIterator(trn, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=True, sort=True)
+        vld_iter = BucketIterator(vld, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=False, sort=True)
 
-        train(model, optimizer, trn_iter, vld_iter, n_epochs, save_results)
+        if freeze_base_model:
+            for mat in base_model.parameters():
+                mat.requires_grad = False # Freeze Bert model so that we only train the classifier on top
+
+        if reduce_options:
+            lemma_mask = defaultdict(lambda: torch.zeros(len(SENSE.vocab), device=device))
+            for example in trn:
+                lemma = LEMMA.vocab.stoi[example.lemma]
+                sense = SENSE.vocab.stoi[example.sense]
+                lemma_mask[lemma][sense] = 1
+            lemma_mask = dict(lemma_mask)
+
+            def mask(batch_logits, batch_lemmas): # Masks out the senses that do not belong to the specified lemma
+                for batch_i in range(len(batch_logits)):
+                    lemma = batch_lemmas[batch_i].item()
+                    batch_logits[batch_i, :] *= lemma_mask[lemma]
+                return batch_logits
+        else:
+            def mask(batch_logits, batch_lemmas):
+                return batch_logits
+
+        model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers)
+
+        model.cuda()
+
+        experiment_name = model_name + " " + classifier_input + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps)
+        print("Starting experiment  " + experiment_name)
+        if test:
+            tst = read_data(test_path, fields, max_len=512)
+            tst_iter = Iterator(tst, device=device, batch_size=batch_size, sort=False, sort_within_batch=False, repeat=False, train=False)
+            batch_predictions = []
+            for batch in tst_iter:
+                print('.', end='')
+                sys.stdout.flush()
+                text = batch.text.t()
+                with torch.no_grad():
+                    outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma)
+                    scores = outputs[-1]
+                batch_predictions.append(scores.argmax(dim=1))
+            batch_preds = torch.cat(batch_predictions, 0).tolist()
+            predicted_senses = [SENSE.vocab.itos(pred) for pred in batch_preds]
+            with open("test_predictions/"+experiment_name+".txt", "w") as out:
+                out.write("\n".join(predicted_senses))
+        else:
+            no_decay = ['bias', 'LayerNorm.weight']
+            decay = 0.01
+            optimizer_grouped_parameters = [
+                {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+                 'weight_decay': decay},
+                {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+            ]
+            optimizer = AdamW(optimizer_grouped_parameters, lr=lr, eps=eps)
+            def save_results(history):
+                with open("results/" + experiment_name + ".txt", "w") as out:
+                    out.write(str(history))
+
+            train(model, optimizer, trn_iter, vld_iter, n_epochs, save_results)
 
 def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
     def evaluate_validation(scores, gold):
