@@ -12,7 +12,7 @@ def wsd(model_name='distilbert-base-uncased',
         classifier_input='token-embedding-last-layer', # token-embedding-last-layer / token-embedding-last-n-layers
         reduce_options=True,
         freeze_base_model=True,
-        max_len=128,
+        max_len=512,
         batch_size=32,
         test=False,
         lr=5e-5,
@@ -105,10 +105,10 @@ def wsd(model_name='distilbert-base-uncased',
 
     model.cuda()
 
-    experiment_name = model_name + " " + classifier_input +  " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  )" + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps)
+    experiment_name = model_name + " " + classifier_input +  " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps)
     print("Starting experiment  " + experiment_name)
     if test:
-        tst = read_data(test_path, fields, max_len=None)
+        tst = read_data(test_path, fields, max_len=512)
         tst_iter = Iterator(tst, device=device, batch_size=batch_size, sort=False, sort_within_batch=False, repeat=False, train=False)
         batch_predictions = []
         for batch in tst_iter:
