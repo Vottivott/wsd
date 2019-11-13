@@ -32,7 +32,7 @@ class WSDModel(nn.Module):
         """
         base_model_output = self.base_model(x)
         #print("base_model_output: ")
-        print(base_model_output)
+        #print(base_model_output)
         hidden_states = base_model_output[-1][-self.use_last_n_layers:] # Because we have set config.output_hidden_states=True and config.output_attentions=False
         #print("number of hidden states: %d" % len(base_model_output[-1]))
         #print("number of hidden cut-out states: %d" % len(hidden_states))
