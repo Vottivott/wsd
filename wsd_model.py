@@ -1,18 +1,20 @@
 import torch
 from torch import nn
 
-"""
-    Model that builds a simple classifier on top of a language model,
-    using the output or hidden layers associated with a specified token position
-"""
+
 class WSDModel(nn.Module):
+    """
+        Model that builds a simple classifier on top of a language model,
+        using the output or hidden layers associated with a specified token position
+    """
     def __init__(self, base_model, num_labels, logits_mask_fn, use_n_last_layers=1, base_model_name="", classifier_hidden_layers=[]):
         super(WSDModel, self).__init__()
         self.base_model = base_model
+        base_output_size = get_base_output_size(base_model, base_model_name)
         if len(classifier_hidden_layers) == 0:
-            self.classifier = nn.Linear(self.base_model.config.dim * use_n_last_layers, num_labels)
+            self.classifier = nn.Linear(base_output_size * use_n_last_layers, num_labels)
         else:
-            layer_sizes = [self.base_model.config.dim * use_n_last_layers] + classifier_hidden_layers
+            layer_sizes = [base_output_size * use_n_last_layers] + classifier_hidden_layers
             layers = sum([[nn.Linear(s1,s2), nn.ReLU()] for s1,s2 in zip(layer_sizes,layer_sizes[1:])],[])
             layers += nn.Linear(layer_sizes[-1], num_labels)
             self.classifier = nn.Sequential(*layers)
@@ -48,3 +50,10 @@ class WSDModel(nn.Module):
             return loss, logits
         else:
             return logits
+
+
+def get_base_output_size(base_model, base_model_name):
+    if base_model_name.startswith('bert'):
+        return base_model.config.hidden_size
+    else:
+        return base_model.config.dim
