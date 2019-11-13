@@ -86,6 +86,21 @@ def wsd(model_name='distilbert-base-uncased',
     dataset = read_data(train_path, fields, max_len)
     random.seed(0)
     trn, vld = dataset.split(0.7, stratified=True, strata_field='sense')
+    print("First 3 trn:")
+    print(trn[:3])
+    random.seed(0)
+    trn, vld = dataset.split(0.7, stratified=True, strata_field='sense')
+    print("First 3 trn:")
+    print(trn[:3])
+    print("Now, also set random state")
+    random.seed(0)
+    trn, vld = dataset.split(0.7, stratified=True, strata_field='sense', random_state=random.getstate())
+    print("First 3 trn:")
+    print(trn[:3])
+    random.seed(0)
+    trn, vld = dataset.split(0.7, stratified=True, strata_field='sense', random_state=random.getstate())
+    print("First 3 trn:")
+    print(trn[:3])
 
     TEXT.build_vocab([])
     if model_name.startswith('albert'):
@@ -123,14 +138,12 @@ def wsd(model_name='distilbert-base-uncased',
                 sys.stdout.flush()
                 text = batch.text.t()
                 with torch.no_grad():
-                    """
                     batch_features = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense, save_embeddings=True)
                     batch_features = batch_features.cpu().numpy()
                     directory = "embeddings/" + model_name + " " + classifier_input + "/" + name
                     if not os.path.exists(directory):
                         os.makedirs(directory)
                     np.save(directory + "/" + str(i) + ".npy", batch_features)
-                    """
                     directory_labels = "embeddings/" + model_name + " " + classifier_input + "/" + name + " labels"
                     if not os.path.exists(directory_labels):
                         os.makedirs(directory_labels)
