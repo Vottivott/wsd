@@ -9,7 +9,7 @@ from transformers import AdamW, DistilBertTokenizer, DistilBertModel
 from wsd_model import WSDModel
 
 def wsd(model_name='distilbert-base-uncased',
-        classifier_input='token-embedding-last-layer', # token-embedding-last-layer / token-embedding-last-n-layers
+        classifier_input='token-embedding-last-4-layers', # token-embedding-last-layer / token-embedding-last-n-layers
         reduce_options=True,
         freeze_base_model=True,
         max_len=512,
@@ -39,6 +39,7 @@ def wsd(model_name='distilbert-base-uncased',
         use_n_last_layers = 1
     elif classifier_input.startswith('token-embedding-') and classifier_input.endswith('-last-layers'):
         use_n_last_layers = int(classifier_input.replace('token-embedding-',"").replace('-last-layers',""))
+    print("Using the last %d layers" % use_n_last_layers)
 
     def tokenize(str):
         return tokenizer.tokenize(str)[:max_len-2]
