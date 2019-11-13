@@ -134,7 +134,7 @@ def wsd(model_name='distilbert-base-uncased',
                     directory_labels = "embeddings/" + model_name + " " + classifier_input + "/" + name + " labels"
                     if not os.path.exists(directory_labels):
                         os.makedirs(directory_labels)
-                    np.save(directory_labels + "/" + str(i) + ".npy", batch.sense)
+                    np.save(directory_labels + "/" + str(i) + ".npy", batch.sense.cpu().numpy())
         print("Finished saving embeddings!")
         exit(0)
     else:
