@@ -76,6 +76,8 @@ def wsd(model_name='distilbert-base-uncased',
                 pre_word_tokenized = tokenizer.tokenize(pre_word)
                 token_position = len(pre_word_tokenized) + 1  # taking into account the later addition of the start token
                 if max_len is None or token_position < max_len-1: # ignore examples where the relevant token is cut off due to max_len
+                    if sense == '?':
+                        sense = 'professional%3:01:00::' # we use this as a placeholder in the test case
                     examples.append(Example.fromlist([sense, lemma, token_position, text], fields))
         return Dataset(examples, fields)
 
@@ -108,7 +110,8 @@ def wsd(model_name='distilbert-base-uncased',
         tst = read_data(test_path, fields, max_len=512)
         tst_iter = Iterator(tst, device=device, batch_size=batch_size, sort=False, sort_within_batch=False,
                             repeat=False, train=False)
-        iters = [('trn',trn_iter),('vld',vld_iter),('tst',tst_iter)]
+        #iters = [('trn',trn_iter),('vld',vld_iter),('tst',tst_iter)]
+        iters = [('tst',tst_iter)]
         model.eval()
         for name,iter in iters:
             print("Saving %s embeddings for %s..." % (name,model_name))
