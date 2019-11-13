@@ -28,7 +28,9 @@ def wsd(model_name='distilbert-base-uncased',
         tokenizer = DistilBertTokenizer.from_pretrained(model_name)
         base_model = DistilBertModel.from_pretrained(model_name, num_labels=n_classes, output_hidden_states=True, output_attentions=False)
     elif model_name.startswith('bert'):
-        raise NotImplementedError()
+        from transformers import BertTokenizer, BertModel
+        tokenizer = BertTokenizer.from_pretrained(model_name)
+        base_model = BertModel.from_pretrained(model_name, num_labels=n_classes, output_hidden_states=True, output_attentions=False)
     elif model_name.startswith('albert'):
         from transformers import AlbertTokenizer
         from transformers.modeling_albert import AlbertModel
