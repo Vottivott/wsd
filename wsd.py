@@ -121,7 +121,10 @@ def wsd(model_name='distilbert-base-uncased',
                 with torch.no_grad():
                     batch_features = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense, save_embeddings=True)
                     batch_features = batch_features.cpu().numpy()
-                    np.save("embeddings/" + model_name + " " + classifier_input + "/" + name + "/" + str(i) + ".npy", batch_features)
+                    directory = "embeddings/" + model_name + " " + classifier_input + "/" + name
+                    if not os.path.exists(directory):
+                        os.makedirs(directory)
+                    np.save(directory + "/" + str(i) + ".npy", batch_features)
         print("Finished saving embeddings!")
         exit(0)
     else:
