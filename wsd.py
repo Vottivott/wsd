@@ -6,7 +6,7 @@ import torch
 from torchtext.data import Field, LabelField, TabularDataset, Iterator, BucketIterator, Example, Dataset
 from transformers import AdamW, DistilBertTokenizer, DistilBertModel
 
-from .wsd_model import WSDModel
+from wsd_model import WSDModel
 
 def wsd(model_name='distilbert-base-uncased',
         classifier_input='token-embedding-last-layer', # token-embedding-last-layer / token-embedding-last-n-layers
