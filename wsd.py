@@ -201,5 +201,5 @@ def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
         if epoch_callback is not None:
             epoch_callback(history)
 
-
-
+if __name__ == "__main__":
+    wsd()
