@@ -271,7 +271,7 @@ def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None, l
         history['train_loss'].append(train_loss)
         print(f' ({train_loss:.4f})')
         n_correct = 0
-        n_valid = len(vld_iter.dataset)
+        n_valid = 22815#len(vld_iter.dataset)
         loss_sum = 0
         n_batches = 0
 
