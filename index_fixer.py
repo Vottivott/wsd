@@ -36,8 +36,7 @@ for folder, newpath in jobs:
         lemmas_list = []
         for i in n:
             print('.',end="")
-            old_i = np.where(o == i) # the position in old of index, i.e. where to fetch this row
-            print(old_i)
+            old_i = np.where(o == i)[0] # the position in old of index, i.e. where to fetch this row
             file_index = int(old_i / 32)
             file_row = old_i % 32
             emb, labels, lemmas = load_embedding_batch(file_index, folder, d)
@@ -53,6 +52,7 @@ for folder, newpath in jobs:
                 np.save(p+suf, np.vstack(emb_rows))
                 np.save(p+" labels" + suf, labels_list)
                 np.save(p+" lemmas" + suf, lemmas_list)
+                print("Saved files " + str(i) + ".npy")
                 emb_rows = []
                 labels_list = []
                 lemmas_list = []
