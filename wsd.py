@@ -21,7 +21,7 @@ def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
         test=False,
         lr=5e-5,
         eps=1e-8,
-        n_epochs=100,
+        n_epochs=50,
         cache_embeddings=True, # If true, the embeddings from the base model are saved to disk so that they only need to be computed once
         save_classifier=True   # If true, the classifier part of the network is saved after each epoch, and the training is automatically resumed from this saved network if it exists
         ):
