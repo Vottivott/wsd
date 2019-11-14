@@ -12,12 +12,12 @@ from wsd_model import WSDModel
 def wsd(model_name='distilbert-base-uncased',
         classifier_input='token-embedding-last-4-layers', # token-embedding-last-layer / token-embedding-last-n-layers
         classifier_hidden_layers=[],
-        reduce_options=False,
+        reduce_options=True,
         freeze_base_model=True,
         max_len=512,
         batch_size=32,
-        save_embeddings=False, # If true, instead of training the program generates embeddings for all training, validation and test examples. Also saves labels
-        load_embeddings=True, # If true, preembedded batches are used instead of running the base mode. Also uses saved labels
+        save_embeddings=True, # If true, instead of training the program generates embeddings for all training, validation and test examples. Also saves labels
+        load_embeddings=False, # If true, preembedded batches are used instead of running the base mode. Also uses saved labels
         test=False,
         lr=5e-5,
         eps=1e-8,
