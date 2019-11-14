@@ -25,6 +25,7 @@ def get_embedding_size(name, dataset_name):
 
 jobs = [(f,f.replace("fix ","")) for f in os.listdir("embeddings") if f.startswith("fix ")]
 for folder, newpath in jobs:
+    print("Fixing " + str(newpath))
     newpath = "embeddings/" + newpath
     ds = ['trn', 'vld']
     for d in ds:
