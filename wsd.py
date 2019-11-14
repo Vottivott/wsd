@@ -291,7 +291,11 @@ def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None, l
                     loss_batch, scores = outputs
 
             loss_sum += loss_batch.item()
-            n_correct += evaluate_validation(scores, batch.sense)
+            if load_embeddings:
+                emb, labels, lemmas = batch
+                n_correct += evaluate_validation(scores, labels)
+            else:
+                n_correct += evaluate_validation(scores, batch.sense)
             n_batches += 1
             if n_batches % 50 == 0:
                 print()
