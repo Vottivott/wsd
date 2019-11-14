@@ -140,7 +140,7 @@ def wsd(model_name='distilbert-base-uncased',
 
     model.cuda()
 
-    experiment_name = model_name + " " + classifier_input + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps)
+    experiment_name = model_name + " " + classifier_input + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps) + (" cache_embeddings" if cache_embeddings else "")
     print("Starting experiment  " + experiment_name)
     if test:
         tst = read_data(test_path, fields, max_len=512)
