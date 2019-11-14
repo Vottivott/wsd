@@ -85,6 +85,26 @@ class WSDModel(nn.Module):
             os.makedirs(path)
         return path
 
+    def save_classifier(self, experiment_name, best=False):
+        path = "saved_classifiers"
+        if not os.path.exists(path):
+            os.makedirs(path)
+        torch.save(self.classifier.state_dict(), path + "/" + experiment_name + ".pt")
+        if best:
+            torch.save(self.classifier.state_dict(), path+"/"+experiment_name+" [BEST]" + ".pt")
+
+    def load_classifier(self, experiment_name):
+        path = "saved_classifiers"
+        try:
+            self.classifier.load_state_dict(torch.load(path+"/"+experiment_name+".pt"))
+            print("Previously found classifier found")
+            return True
+        except FileNotFoundError:
+            print("No previously saved classifier found")
+            return False
+
+
+
 
 def get_base_output_size(base_model, base_model_name):
     if base_model_name.startswith('distilbert'):
