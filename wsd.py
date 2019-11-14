@@ -7,9 +7,11 @@ from torchtext.data import Field, LabelField, TabularDataset, Iterator, BucketIt
 from transformers import AdamW, DistilBertTokenizer, DistilBertModel
 
 from wsd_model import WSDModel
+from wsd_ensemble_model import WSDEnsembleModel
 from results_plotter import read_dict_file
 
-def wsd(model_name='distilbert-base-uncased',
+
+def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
         classifier_input='token-embedding-last-4-layers', # token-embedding-last-layer / token-embedding-last-n-layers
         classifier_hidden_layers=[],
         reduce_options=True,
@@ -32,7 +34,15 @@ def wsd(model_name='distilbert-base-uncased',
     print("Script: " + os.path.basename(main.__file__))
 
     print("Loading base model %s..." % model_name)
-    if model_name.startswith('distilbert'):
+    if model_name.startswith('ensemble-distil-'):
+        last_n_distil = int(model_name.replace('ensemble-distil-',"")[0])
+        last_n_albert = int(model_name[-1])
+        from transformers import AlbertTokenizer
+        from transformers.modeling_albert import AlbertModel
+        base_model = None
+        tokenizer = AlbertTokenizer.from_pretrained(model_name)
+        print("Ensemble model with DistilBert last %d layers and Albert last %d layers" % (last_n_distil, last_n_albert))
+    elif model_name.startswith('distilbert'):
         tokenizer = DistilBertTokenizer.from_pretrained(model_name)
         base_model = DistilBertModel.from_pretrained(model_name, num_labels=n_classes, output_hidden_states=True, output_attentions=False)
     elif model_name.startswith('bert'):
@@ -138,8 +148,12 @@ def wsd(model_name='distilbert-base-uncased',
         def mask(batch_logits, batch_lemmas):
             return batch_logits
 
-    experiment_name = model_name + " " + classifier_input + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps) + (" cache_embeddings" if cache_embeddings else "")
-    model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers, cache_embeddings)
+    experiment_name = model_name + " " + (classifier_input if model_name.startswith('ensemble-distil-') else "") + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps) + (" cache_embeddings" if cache_embeddings else "")
+
+    if model_name.startswith('ensemble-distil-'):
+        model = WSDEnsembleModel(last_n_distil, last_n_albert, n_classes, mask, classifier_hidden_layers)
+    else:
+        model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers, cache_embeddings)
     history = None
     if save_classifier:
         if model.load_classifier(experiment_name):
