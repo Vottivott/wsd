@@ -34,7 +34,8 @@ for folder, newpath in jobs:
         emb_rows = []
         labels_list = []
         lemmas_list = []
-        for i in n:
+        out_index = 0
+        for index,i in enumerate(n):
             print('.',end="")
             old_i = np.where(o == i)[0] # the position in old of index, i.e. where to fetch this row
             file_index = int(old_i / 32)
@@ -43,19 +44,20 @@ for folder, newpath in jobs:
             emb_rows.append(emb[file_row,:])
             labels_list.append(labels[file_row])
             lemmas_list.append(lemmas[file_row])
-            if i % 32 == 31 or i==n[-1]:
+            if index % 32 == 31 or index==len(n)-1:
                 p = newpath + "/" + d
-                suf = "/" + str(i) + ".npy"
+                suf = "/" + str(out_index) + ".npy"
                 for dir in [p, p+" labels", p+" lemmas"]:
                     if not os.path.exists(dir):
                         os.makedirs(dir)
                 np.save(p+suf, np.vstack(emb_rows))
                 np.save(p+" labels" + suf, labels_list)
                 np.save(p+" lemmas" + suf, lemmas_list)
-                print("Saved files " + str(i) + ".npy")
+                print("Saved files " + str(out_index) + ".npy")
                 emb_rows = []
                 labels_list = []
                 lemmas_list = []
+                out_index += 1
 
 
 
