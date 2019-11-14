@@ -11,14 +11,15 @@ class WSDModel(nn.Module):
         super(WSDModel, self).__init__()
         if type(base_model) == int:
             self.base_model = None
-            base_output_size = base_model
+            classifier_input_size = base_model
         else:
             self.base_model = base_model
             base_output_size = get_base_output_size(base_model, base_model_name)
+            classifier_input_size = base_output_size * use_last_n_layers
         if len(classifier_hidden_layers) == 0:
-            self.classifier = nn.Linear(base_output_size * use_last_n_layers, num_labels)
+            self.classifier = nn.Linear(classifier_input_size, num_labels)
         else:
-            layer_sizes = [base_output_size * use_last_n_layers] + classifier_hidden_layers
+            layer_sizes = [classifier_input_size] + classifier_hidden_layers
             layers = sum([[nn.Linear(s1,s2), nn.ReLU()] for s1,s2 in zip(layer_sizes,layer_sizes[1:])],[])
             layers += [nn.Linear(layer_sizes[-1], num_labels)]
             self.classifier = nn.Sequential(*layers)
