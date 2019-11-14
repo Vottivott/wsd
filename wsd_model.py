@@ -1,13 +1,14 @@
 import torch
 from torch import nn
-
+import numpy as np
+import os
 
 class WSDModel(nn.Module):
     """
         Model that builds a simple classifier on top of a language model,
         using the output or hidden layers associated with a specified token position
     """
-    def __init__(self, base_model, num_labels, logits_mask_fn, use_last_n_layers=1, base_model_name="", classifier_hidden_layers=[]):
+    def __init__(self, base_model, num_labels, logits_mask_fn, use_last_n_layers=1, base_model_name="", classifier_hidden_layers=[], cache_embeddings=False):
         super(WSDModel, self).__init__()
         self.base_model = base_model
         base_output_size = get_base_output_size(base_model, base_model_name)
@@ -25,18 +26,27 @@ class WSDModel(nn.Module):
         self.logits_mask_fn = logits_mask_fn
         self.use_last_n_layers = use_last_n_layers
         self.base_model_name = base_model_name
+        self.cache_embeddings = cache_embeddings
+        if cache_embeddings:
+            self.cached_embeddings_path = self.get_cached_embeddings_path(True)
 
-    def forward(self, x, token_positions=None, lemmas=None, labels=None):
+    def forward(self, x, token_positions=None, lemmas=None, labels=None, example_ids=None):
         """
         :param token_positions: The position of the token we want to query the sense of, for each batch
         """
-        base_model_output = self.base_model(x)
-        hidden_states = base_model_output[-1][-self.use_last_n_layers:] # Because we have set config.output_hidden_states=True and config.output_attentions=False
-        hidden_states_for_relevant_token = []
-        for layer in hidden_states:
-            hidden_state_for_relevant_token = layer[list(range(len(token_positions))),token_positions,:]
-            hidden_states_for_relevant_token.append(hidden_state_for_relevant_token)
-        features_for_relevant_token = torch.cat(hidden_states_for_relevant_token, 1) # Concatenate the last n hidden layers along the neuron dimension
+        features_for_relevant_token = None
+        if self.cache_embeddings:
+            features_for_relevant_token = self.load_cached_embeddings(example_ids)
+        if features_for_relevant_token is None:
+            base_model_output = self.base_model(x)
+            hidden_states = base_model_output[-1][-self.use_last_n_layers:] # Because we have set config.output_hidden_states=True and config.output_attentions=False
+            hidden_states_for_relevant_token = []
+            for layer in hidden_states:
+                hidden_state_for_relevant_token = layer[list(range(len(token_positions))),token_positions,:]
+                hidden_states_for_relevant_token.append(hidden_state_for_relevant_token)
+            features_for_relevant_token = torch.cat(hidden_states_for_relevant_token, 1) # Concatenate the last n hidden layers along the neuron dimension
+            if self.cache_embeddings:
+                self.save_cached_embeddings(features_for_relevant_token, example_ids)
 
         logits = self.classifier(features_for_relevant_token)
         logits = self.logits_mask_fn(logits, lemmas)
@@ -51,9 +61,36 @@ class WSDModel(nn.Module):
         else:
             return logits
 
+    def load_cached_embeddings(self, ids):
+        num_embeddings = ids.shape[0]
+        loaded_embeddings = []
+        for i in range(num_embeddings):
+            path = self.cached_embeddings_path + "/" + ids[i] + ".npy"
+            try:
+                loaded_embeddings.append(np.load(path))
+            except FileNotFoundError:
+                print("*",end="")
+                return None
+        return torch.tensor(np.vstack(loaded_embeddings)).cuda()
+
+    def save_cached_embeddings(self, embeddings, ids):
+        num_embeddings = ids.shape[0]
+        for i in range(num_embeddings):
+            path = self.cached_embeddings_path + "/" + ids[i] + ".npy"
+            np.save(path, embeddings[None,i,:].cpu().numpy())
+
+    def get_cached_embeddings_path(self, create_if_not_exists=False):
+        path = "embeddings/" + self.base_model_name + "_last-" + str(self.use_last_n_layers)
+        if create_if_not_exists and not os.path.exists(path):
+            os.makedirs(path)
+        return path
+
 
 def get_base_output_size(base_model, base_model_name):
     if base_model_name.startswith('distilbert'):
         return base_model.config.dim
     else:
         return base_model.config.hidden_size
+
+
+

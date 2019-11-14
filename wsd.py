@@ -18,7 +18,9 @@ def wsd(model_name='distilbert-base-uncased',
         test=False,
         lr=5e-5,
         eps=1e-8,
-        n_epochs=100):
+        n_epochs=100,
+        cache_embeddings=True # If true, the embeddings from the base model are saved to disk so that they only need to be computed once
+        ):
     train_path = "wsd_train.txt"
     test_path = "wsd_test_blind.txt"
     n_classes = 222
@@ -86,6 +88,9 @@ def wsd(model_name='distilbert-base-uncased',
                 example_id = id_start + i
                 if max_len is None or token_position < max_len-1: # ignore examples where the relevant token is cut off due to max_len
                     examples.append(Example.fromlist([sense, lemma, token_position, text, example_id], fields))
+                else:
+                    print("Example %d is skipped because the relevant token was cut off (token pos = %d)" % (example_id, token_position))
+                    print(text)
         return Dataset(examples, fields)
 
     dataset = read_data(train_path, fields, max_len)
@@ -131,7 +136,7 @@ def wsd(model_name='distilbert-base-uncased',
         def mask(batch_logits, batch_lemmas):
             return batch_logits
 
-    model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers)
+    model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers, cache_embeddings)
 
     model.cuda()
 
@@ -146,7 +151,7 @@ def wsd(model_name='distilbert-base-uncased',
             sys.stdout.flush()
             text = batch.text.t()
             with torch.no_grad():
-                outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma)
+                outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, example_ids=batch.example_id)
                 scores = outputs[-1]
             batch_predictions.append(scores.argmax(dim=1))
         batch_preds = torch.cat(batch_predictions, 0).tolist()
@@ -184,7 +189,7 @@ def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
             sys.stdout.flush()
             text = batch.text.t()
             optimizer.zero_grad()
-            outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense)
+            outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense, example_ids=batch.example_id)
             loss = outputs[0]
 
             loss.backward()
@@ -209,7 +214,7 @@ def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
             sys.stdout.flush()
             text = batch.text.t()
             with torch.no_grad():
-                outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense)
+                outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense, example_ids=batch.example_id)
                 loss_batch, scores = outputs
 
             loss_sum += loss_batch.item()
