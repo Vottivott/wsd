@@ -155,11 +155,11 @@ def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
     else:
         model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers, cache_embeddings)
     history = None
-    if save_classifier:
-        if model.load_classifier(experiment_name):
-            # Existing saved model loaded
-            # Also load the corresponding training history
-            history = read_dict_file("results/"+experiment_name+".txt")
+    #if save_classifier:
+    #    if model.load_classifier(experiment_name):
+    #        # Existing saved model loaded
+    #        # Also load the corresponding training history
+    #        history = read_dict_file("results/"+experiment_name+".txt")
 
     model.cuda()
 
@@ -193,7 +193,7 @@ def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
             with open("results/" + experiment_name + ".txt", "w") as out:
                 out.write(str(history))
             if save_classifier:
-                if len(history['val_acc']) == 0 or history['val_acc'][-1] > max(history['val_acc'][:-1]):
+                if len(history['val_acc']) < 2 or history['val_acc'][-1] > max(history['val_acc'][:-1]):
                     model.save_classifier(experiment_name, best=True)
                 else:
                     model.save_classifier(experiment_name, best=False)
