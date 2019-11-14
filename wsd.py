@@ -12,7 +12,7 @@ from wsd_model import WSDModel
 def wsd(model_name='distilbert-base-uncased',
         classifier_input='token-embedding-last-4-layers', # token-embedding-last-layer / token-embedding-last-n-layers
         classifier_hidden_layers=[],
-        reduce_options=True,
+        reduce_options=False,
         freeze_base_model=True,
         max_len=512,
         batch_size=32,
