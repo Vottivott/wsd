@@ -72,7 +72,8 @@ class WSDModel(nn.Module):
                 try:
                     emb = np.load("embeddings/" + self.base_model_name + "_last-4" + "/" + str(ids[i].item()) + ".npy")
                     w = emb.shape[1]
-                    wanted_w = self.use_last_n_layers * w/4
+                    wanted_w = self.use_last_n_layers * w//4
+                    print(wanted_w)
                     emb = emb[:,-wanted_w:]
                     loaded_embeddings.append(emb)
                 except FileNotFoundError:
