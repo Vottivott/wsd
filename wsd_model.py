@@ -65,7 +65,7 @@ class WSDModel(nn.Module):
         num_embeddings = ids.shape[0]
         loaded_embeddings = []
         for i in range(num_embeddings):
-            path = self.cached_embeddings_path + "/" + ids[i] + ".npy"
+            path = self.cached_embeddings_path + "/" + str(ids[i].item()) + ".npy"
             try:
                 loaded_embeddings.append(np.load(path))
             except FileNotFoundError:
@@ -76,7 +76,7 @@ class WSDModel(nn.Module):
     def save_cached_embeddings(self, embeddings, ids):
         num_embeddings = ids.shape[0]
         for i in range(num_embeddings):
-            path = self.cached_embeddings_path + "/" + ids[i] + ".npy"
+            path = self.cached_embeddings_path + "/" + str(ids[i].item()) + ".npy"
             np.save(path, embeddings[None,i,:].cpu().numpy())
 
     def get_cached_embeddings_path(self, create_if_not_exists=False):
