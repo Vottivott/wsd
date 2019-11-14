@@ -40,7 +40,7 @@ def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
         from transformers import AlbertTokenizer
         from transformers.modeling_albert import AlbertModel
         base_model = None
-        tokenizer = AlbertTokenizer.from_pretrained(model_name)
+        tokenizer = AlbertTokenizer.from_pretrained('albert-xxlarge-v2')
         print("Ensemble model with DistilBert last %d layers and Albert last %d layers" % (last_n_distil, last_n_albert))
     elif model_name.startswith('distilbert'):
         tokenizer = DistilBertTokenizer.from_pretrained(model_name)
