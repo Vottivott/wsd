@@ -173,9 +173,10 @@ def wsd(model_name='distilbert-base-uncased',
             trn_iter = BucketIterator(trn, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=True, sort=True)
             vld_iter = BucketIterator(vld, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=False, sort=True)
 
-        if freeze_base_model:
-            for mat in base_model.parameters():
-                mat.requires_grad = False # Freeze Bert model so that we only train the classifier on top
+        if not load_embeddings:
+            if freeze_base_model:
+                for mat in base_model.parameters():
+                    mat.requires_grad = False # Freeze Bert model so that we only train the classifier on top
 
         if reduce_options:
             lemma_mask = defaultdict(lambda: torch.zeros(len(SENSE.vocab), device=device))
