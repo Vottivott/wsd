@@ -58,23 +58,34 @@ def wsd(model_name='distilbert-base-uncased',
     TOKEN_POS = LabelField(use_vocab=False)
     TEXT = Field(tokenize=tokenize, pad_token=tokenizer.pad_token, init_token=tokenizer.cls_token,
                  eos_token=tokenizer.sep_token)
+    EXAMPLE_ID = LabelField(use_vocab=False)
     fields = [('sense', SENSE),
               ('lemma', LEMMA),
               ('token_pos', TOKEN_POS),
-              ('text', TEXT)]
+              ('text', TEXT),
+              ('example_id', EXAMPLE_ID)]
 
     def read_data(corpus_file, fields, max_len=None):
+        train_id_start = 0
+        test_id_start = 76049 # let the ids for the test examples start after the training example indices
+        if corpus_file == "wsd_test_blind.txt":
+            print("Loading test data...")
+            id_start = test_id_start
+        else:
+            print("Loading train/val data...")
+            id_start = train_id_start
         with open(corpus_file, encoding='utf-8') as f:
             examples = []
-            for line in f:
+            for i,line in enumerate(f):
                 sense, lemma, word_position, text = line.split('\t')
                 # We need to convert from the word position to the token position
                 words = text.split()
                 pre_word = " ".join(words[:int(word_position)])
                 pre_word_tokenized = tokenizer.tokenize(pre_word)
                 token_position = len(pre_word_tokenized) + 1  # taking into account the later addition of the start token
+                example_id = id_start + i
                 if max_len is None or token_position < max_len-1: # ignore examples where the relevant token is cut off due to max_len
-                    examples.append(Example.fromlist([sense, lemma, token_position, text], fields))
+                    examples.append(Example.fromlist([sense, lemma, token_position, text, example_id], fields))
         return Dataset(examples, fields)
 
     dataset = read_data(train_path, fields, max_len)
