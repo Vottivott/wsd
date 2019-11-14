@@ -110,7 +110,7 @@ def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
     trn, vld = dataset.split(0.7, stratified=True, strata_field='sense')
 
     TEXT.build_vocab([])
-    if model_name.startswith('albert'):
+    if model_name.startswith('albert') or model_name.startswith('ensemble-distil-'):
         class Mapping:
             def __init__(self, fn):
                 self.fn = fn
