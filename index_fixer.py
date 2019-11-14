@@ -37,6 +37,7 @@ for folder, newpath in jobs:
         for i in n:
             print('.',end="")
             old_i = np.where(o == i) # the position in old of index, i.e. where to fetch this row
+            print(old_i)
             file_index = int(old_i / 32)
             file_row = old_i % 32
             emb, labels, lemmas = load_embedding_batch(file_index, folder, d)
