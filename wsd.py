@@ -160,7 +160,7 @@ def wsd(model_name='distilbert-base-uncased',
     else:
         if load_embeddings:
             class EmbIter:
-                def __init__(self, datset_name):
+                def __init__(self, dataset_name):
                     self.dataset_name = dataset_name
                     self.num_batches = get_num_batches(model_name,classifier_input,self.dataset_name)
 
