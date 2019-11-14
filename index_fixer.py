@@ -42,9 +42,12 @@ for folder, newpath in jobs:
             emb_rows.append(emb[file_row,:])
             labels_list.append(labels[file_row])
             lemmas_list.append(lemmas[file_row])
-            if i % 32 == 31:
+            if i % 32 == 31 or i==n[-1]:
                 p = newpath + "/" + d
                 suf = "/" + str(i) + ".npy"
+                for dir in [p, p+" labels", p+" lemmas"]:
+                    if not os.path.exists(dir):
+                        os.makedirs(dir)
                 np.save(p+suf, np.vstack(emb_rows))
                 np.save(p+" labels" + suf, labels_list)
                 np.save(p+" lemmas" + suf, lemmas_list)
