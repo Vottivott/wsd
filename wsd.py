@@ -30,19 +30,22 @@ def wsd(model_name='distilbert-base-uncased',
     import __main__ as main
     print("Script: " + os.path.basename(main.__file__))
 
-    if not load_embeddings:
-        print("Loading base model %s..." % model_name)
-        if model_name.startswith('distilbert'):
-            tokenizer = DistilBertTokenizer.from_pretrained(model_name)
+
+    print("Loading base model %s..." % model_name)
+    if model_name.startswith('distilbert'):
+        tokenizer = DistilBertTokenizer.from_pretrained(model_name)
+        if not load_embeddings:
             base_model = DistilBertModel.from_pretrained(model_name, num_labels=n_classes, output_hidden_states=True, output_attentions=False)
-        elif model_name.startswith('bert'):
-            from transformers import BertTokenizer, BertModel
-            tokenizer = BertTokenizer.from_pretrained(model_name)
+    elif model_name.startswith('bert'):
+        from transformers import BertTokenizer, BertModel
+        tokenizer = BertTokenizer.from_pretrained(model_name)
+        if not load_embeddings:
             base_model = BertModel.from_pretrained(model_name, num_labels=n_classes, output_hidden_states=True, output_attentions=False)
-        elif model_name.startswith('albert'):
-            from transformers import AlbertTokenizer
-            from transformers.modeling_albert import AlbertModel
-            tokenizer = AlbertTokenizer.from_pretrained(model_name)
+    elif model_name.startswith('albert'):
+        from transformers import AlbertTokenizer
+        from transformers.modeling_albert import AlbertModel
+        tokenizer = AlbertTokenizer.from_pretrained(model_name)
+        if not load_embeddings:
             base_model = AlbertModel.from_pretrained(model_name, output_hidden_states=True, output_attentions=False)
 
     use_n_last_layers = 1
