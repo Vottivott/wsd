@@ -179,7 +179,7 @@ def wsd(model_name='distilbert-base-uncased',
             with open("results/" + experiment_name + ".txt", "w") as out:
                 out.write(str(history))
             if save_classifier:
-                if len(history['val_acc']) == 0 or history['val_acc'][-1] > max(history['val_acc']):
+                if len(history['val_acc']) == 0 or history['val_acc'][-1] > max(history['val_acc'][:-1]):
                     model.save_classifier(experiment_name, best=True)
                 else:
                     model.save_classifier(experiment_name, best=False)
