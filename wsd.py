@@ -62,16 +62,19 @@ def wsd(model_name='distilbert-base-uncased',
     TOKEN_POS = LabelField(use_vocab=False)
     TEXT = Field(tokenize=tokenize, pad_token=tokenizer.pad_token, init_token=tokenizer.cls_token,
                  eos_token=tokenizer.sep_token)
+    INDEX = LabelField(use_vocab=False)
     fields = [('sense', SENSE),
               ('lemma', LEMMA),
               ('token_pos', TOKEN_POS),
-              ('text', TEXT)]
+              ('text', TEXT),
+              ('index', INDEX)]
 
     def read_data(corpus_file, fields, max_len=None):
         with open(corpus_file, encoding='utf-8') as f:
             examples = []
-            for line in f:
+            for i,line in enumerate(f):
                 sense, lemma, word_position, text = line.split('\t')
+                text = ""
                 # We need to convert from the word position to the token position
                 words = text.split()
                 pre_word = " ".join(words[:int(word_position)])
@@ -80,34 +83,23 @@ def wsd(model_name='distilbert-base-uncased',
                 if max_len is None or token_position < max_len-1: # ignore examples where the relevant token is cut off due to max_len
                     if sense == '?':
                         sense = 'professional%3:01:00::' # we use this as a placeholder in the test case
-                    examples.append(Example.fromlist([sense, lemma, token_position, text], fields))
+                    examples.append(Example.fromlist([sense, lemma, token_position, text, i], fields))
         return Dataset(examples, fields)
 
     dataset = read_data(train_path, fields, max_len)
-    print(dataset[0].text)
-    print(dataset[1].text)
+    print("First 2 examples:")
+    print(dataset[0].sense)
+    print(dataset[1].sense)
 
-    dataset = read_data(train_path, fields, max_len)
-    print(dataset[0].text)
-    print(dataset[1].text)
-
-    random.seed(0)
-    trn, vld = dataset.split(0.7, stratified=True, strata_field='sense')
-    print("First 3 trn:")
-    print(list(map(lambda x: x.text[:10], trn[:3])))
-    random.seed(0)
-    trn, vld = dataset.split(0.7, stratified=True, strata_field='sense')
-    print("First 3 trn:")
-    print(list(map(lambda x: x.text[:10], trn[:3])))
-    print("Now, also set random state")
-    random.seed(0)
-    trn, vld = dataset.split(0.7, stratified=True, strata_field='sense', random_state=random.getstate())
-    print("First 3 trn:")
-    print(list(map(lambda x: x.text[:10], trn[:3])))
-    random.seed(0)
-    trn, vld = dataset.split(0.7, stratified=True, strata_field='sense', random_state=random.getstate())
-    print("First 3 trn:")
-    print(list(map(lambda x: x.text[:10], trn[:3])))
+    # trn, vld = dataset.split(0.7, stratified=True, strata_field='sense')
+    trn_indices = np.load("trn_indices.npy")
+    vld_indices = np.load("vld_indices.npy")
+    trn = Dataset([dataset[i] for i in trn_indices], fields)
+    vld = Dataset([dataset[i] for i in vld_indices], fields)
+    print("First 5 trn:")
+    print(list(map(lambda x: x.sense, trn[:5])))
+    print("First 5 vld:")
+    print(list(map(lambda x: x.sense, vld[:5])))
 
     TEXT.build_vocab([])
     if model_name.startswith('albert'):
