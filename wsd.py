@@ -316,6 +316,7 @@ def load_embedding_batch(index, model_name, classifier_input, dataset_name):
     emb = np.load(emb_path + "/" + str(index) + ".npy")
     labels = np.load(labels_path + "/" + str(index) + ".npy")
     lemmas = np.load(lemmas_path + "/" + str(index) + ".npy")
+    emb, labels, lemmas = torch.tensor(emb).cuda(),torch.tensor(labels).cuda(),torch.tensor(lemmas).cuda()
     return emb, labels, lemmas
 
 def get_num_batches(model_name, classifier_input, dataset_name):
