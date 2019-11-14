@@ -9,8 +9,12 @@ class WSDModel(nn.Module):
     """
     def __init__(self, base_model, num_labels, logits_mask_fn, use_last_n_layers=1, base_model_name="", classifier_hidden_layers=[]):
         super(WSDModel, self).__init__()
-        self.base_model = base_model
-        base_output_size = get_base_output_size(base_model, base_model_name)
+        if type(base_model) == int:
+            self.base_model = None
+            base_output_size = base_model
+        else:
+            self.base_model = base_model
+            base_output_size = get_base_output_size(base_model, base_model_name)
         if len(classifier_hidden_layers) == 0:
             self.classifier = nn.Linear(base_output_size * use_last_n_layers, num_labels)
         else:
@@ -30,20 +34,23 @@ class WSDModel(nn.Module):
         """
         :param token_positions: The position of the token we want to query the sense of, for each batch
         """
-        base_model_output = self.base_model(x)
-        #print("base_model_output: ")
-        #print(base_model_output)
-        hidden_states = base_model_output[-1][-self.use_last_n_layers:] # Because we have set config.output_hidden_states=True and config.output_attentions=False
-        #print("number of hidden states: %d" % len(base_model_output[-1]))
-        #print("number of hidden cut-out states: %d" % len(hidden_states))
-        #print("self.use_last_n_layers = %d" % self.use_last_n_layers)
-        hidden_states_for_relevant_token = []
-        for layer in hidden_states:
-            hidden_state_for_relevant_token = layer[list(range(len(token_positions))),token_positions,:]
-            #print("  hidden_state_for_relevant_token.shape: " + str(hidden_state_for_relevant_token.shape))
-            hidden_states_for_relevant_token.append(hidden_state_for_relevant_token)
-        features_for_relevant_token = torch.cat(hidden_states_for_relevant_token, 1) # Concatenate the last n hidden layers along the neuron dimension
-        #print("features_for_relevant_token.shape: " + str(features_for_relevant_token))
+        if self.base_model is None:
+            features_for_relevant_token = x
+        else:
+            base_model_output = self.base_model(x)
+            #print("base_model_output: ")
+            #print(base_model_output)
+            hidden_states = base_model_output[-1][-self.use_last_n_layers:] # Because we have set config.output_hidden_states=True and config.output_attentions=False
+            #print("number of hidden states: %d" % len(base_model_output[-1]))
+            #print("number of hidden cut-out states: %d" % len(hidden_states))
+            #print("self.use_last_n_layers = %d" % self.use_last_n_layers)
+            hidden_states_for_relevant_token = []
+            for layer in hidden_states:
+                hidden_state_for_relevant_token = layer[list(range(len(token_positions))),token_positions,:]
+                #print("  hidden_state_for_relevant_token.shape: " + str(hidden_state_for_relevant_token.shape))
+                hidden_states_for_relevant_token.append(hidden_state_for_relevant_token)
+            features_for_relevant_token = torch.cat(hidden_states_for_relevant_token, 1) # Concatenate the last n hidden layers along the neuron dimension
+            #print("features_for_relevant_token.shape: " + str(features_for_relevant_token))
 
         if save_embeddings:
             return features_for_relevant_token

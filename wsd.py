@@ -74,7 +74,8 @@ def wsd(model_name='distilbert-base-uncased',
             examples = []
             for i,line in enumerate(f):
                 sense, lemma, word_position, text = line.split('\t')
-                text = ""
+                if load_embeddings:
+                    text = "" # We don't need the text if we load the embeddings
                 # We need to convert from the word position to the token position
                 words = text.split()
                 pre_word = " ".join(words[:int(word_position)])
@@ -147,11 +148,27 @@ def wsd(model_name='distilbert-base-uncased',
                     if not os.path.exists(directory_labels):
                         os.makedirs(directory_labels)
                     np.save(directory_labels + "/" + str(i) + ".npy", batch.sense.cpu().numpy())
+                    directory_lemmas = "embeddings/" + model_name + " " + classifier_input + "/" + name + " lemmas"
+                    if not os.path.exists(directory_lemmas):
+                        os.makedirs(directory_lemmas)
+                    np.save(directory_lemmas + "/" + str(i) + ".npy", batch.lemma.cpu().numpy())
         print("Finished saving embeddings!")
         exit(0)
     else:
-        trn_iter = BucketIterator(trn, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=True, sort=True)
-        vld_iter = BucketIterator(vld, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=False, sort=True)
+        if load_embeddings:
+            class EmbIter:
+                def __init__(self, datset_name):
+                    self.dataset_name = dataset_name
+                    self.num_batches = get_num_batches(model_name,classifier_input,self.dataset_name)
+
+                def __iter__(self):
+                    for i in range(self.num_batches):
+                        yield load_embedding_batch(i,model_name,classifier_input,self.dataset_name)
+            trn_iter = EmbIter('trn')
+            vld_iter = EmbIter('vld')
+        else:
+            trn_iter = BucketIterator(trn, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=True, sort=True)
+            vld_iter = BucketIterator(vld, device=device, batch_size=batch_size, sort_key=lambda x: len(x.text), repeat=False, train=False, sort=True)
 
         if freeze_base_model:
             for mat in base_model.parameters():
@@ -174,7 +191,11 @@ def wsd(model_name='distilbert-base-uncased',
             def mask(batch_logits, batch_lemmas):
                 return batch_logits
 
-        model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers)
+        if load_embeddings:
+            emb_size = get_embedding_size(model_name, classifier_input, "trn")
+            model = WSDModel(emb_size, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers)
+        else:
+            model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers)
 
         model.cuda()
 
@@ -209,9 +230,9 @@ def wsd(model_name='distilbert-base-uncased',
                 with open("results/" + experiment_name + ".txt", "w") as out:
                     out.write(str(history))
 
-            train(model, optimizer, trn_iter, vld_iter, n_epochs, save_results)
+            train(model, optimizer, trn_iter, vld_iter, n_epochs, save_results, load_embeddings)
 
-def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
+def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None, load_embeddings=False):
     def evaluate_validation(scores, gold):
         guesses = scores.argmax(dim=1)
         return (guesses == gold).sum().item()
@@ -225,9 +246,13 @@ def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
         for batch in trn_iter:
             print('.', end='')
             sys.stdout.flush()
-            text = batch.text.t()
-            optimizer.zero_grad()
-            outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense)
+            if load_embeddings:
+                emb, labels, lemmas = batch
+                outputs = model(emb, lemmas=lemmas, labels=labels)
+            else:
+                text = batch.text.t()
+                optimizer.zero_grad()
+                outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense)
             loss = outputs[0]
 
             loss.backward()
@@ -250,10 +275,16 @@ def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
         for batch in vld_iter:
             print('.', end='')
             sys.stdout.flush()
-            text = batch.text.t()
-            with torch.no_grad():
-                outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense)
-                loss_batch, scores = outputs
+            if load_embeddings:
+                emb, labels, lemmas = batch
+                with torch.no_grad():
+                    outputs = model(emb, lemmas=lemmas, labels=labels)
+                    loss_batch, scores = outputs
+            else:
+                text = batch.text.t()
+                with torch.no_grad():
+                    outputs = model(text, token_positions=batch.token_pos, lemmas=batch.lemma, labels=batch.sense)
+                    loss_batch, scores = outputs
 
             loss_sum += loss_batch.item()
             n_correct += evaluate_validation(scores, batch.sense)
@@ -273,6 +304,24 @@ def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
             f'Epoch {i + 1}: train loss = {train_loss:.4f}, val loss = {val_loss:.4f}, val  acc: {val_acc:.4f}, time = {t1 - t0:.4f}')
         if epoch_callback is not None:
             epoch_callback(history)
+
+def load_embedding_batch(index, model_name, classifier_input, dataset_name):
+    emb_path = "embeddings/" + model_name + " " + classifier_input + "/" + dataset_name
+    labels_path = emb_path + " labels"
+    lemmas_path = emb_path + " lemmas"
+    emb = np.load(emb_path + "/" + str(index) + ".npy")
+    labels = np.load(labels_path + "/" + str(index) + ".npy")
+    lemmas = np.load(lemmas_path + "/" + str(index) + ".npy")
+    return emb, labels, lemmas
+
+def get_num_batches(model_name, classifier_input, dataset_name):
+    emb_path = "embeddings/" + model_name + " " + classifier_input + "/" + dataset_name
+    return len(os.listdir(emb_path))
+
+def get_embedding_size(model_name, classifier_input, dataset_name):
+    emb_path = "embeddings/" + model_name + " " + classifier_input + "/" + dataset_name
+    emb = np.load(emb_path + "/" + str(0) + ".npy")
+    return emb.shape[1]
 
 if __name__ == "__main__":
     wsd()
