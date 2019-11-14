@@ -28,7 +28,7 @@ class WSDModel(nn.Module):
         self.base_model_name = base_model_name
         self.cache_embeddings = cache_embeddings
         if cache_embeddings:
-            self.cached_embeddings_path = self.get_cached_embeddings_path(True)
+            self.cached_embeddings_path = self.get_cached_embeddings_path(False)
 
     def forward(self, x, token_positions=None, lemmas=None, labels=None, example_ids=None):
         """
@@ -69,14 +69,21 @@ class WSDModel(nn.Module):
             try:
                 loaded_embeddings.append(np.load(path))
             except FileNotFoundError:
-                print("*",end="")
-                return None
+                try:
+                    emb = np.load("embeddings/" + self.base_model_name + "_last-4")
+                    w = emb.shape[1]
+                    wanted_w = self.use_last_n_layers * w/4
+                    emb = emb[:,-wanted_w:]
+                    loaded_embeddings.append(emb)
+                except FileNotFoundError:
+                    print("*",end="")
+                    return None
         return torch.tensor(np.vstack(loaded_embeddings)).cuda()
 
     def save_cached_embeddings(self, embeddings, ids):
         num_embeddings = ids.shape[0]
         for i in range(num_embeddings):
-            path = self.cached_embeddings_path + "/" + str(ids[i].item()) + ".npy"
+            path = self.get_cached_embeddings_path(True) + "/" + str(ids[i].item()) + ".npy"
             np.save(path, embeddings[None,i,:].cpu().numpy())
 
     def get_cached_embeddings_path(self, create_if_not_exists=False):
@@ -84,6 +91,26 @@ class WSDModel(nn.Module):
         if create_if_not_exists and not os.path.exists(path):
             os.makedirs(path)
         return path
+
+    def save_classifier(self, experiment_name, best=False):
+        path = "saved_classifiers"
+        if not os.path.exists(path):
+            os.makedirs(path)
+        torch.save(self.classifier.state_dict(), path + "/" + experiment_name + ".pt")
+        if best:
+            torch.save(self.classifier.state_dict(), path+"/"+experiment_name+" [BEST]" + ".pt")
+
+    def load_classifier(self, experiment_name):
+        path = "saved_classifiers"
+        try:
+            self.classifier.load_state_dict(torch.load(path+"/"+experiment_name+".pt"))
+            print("Previously found classifier found")
+            return True
+        except FileNotFoundError:
+            print("No previously saved classifier found")
+            return False
+
+
 
 
 def get_base_output_size(base_model, base_model_name):

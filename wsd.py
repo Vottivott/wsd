@@ -7,6 +7,7 @@ from torchtext.data import Field, LabelField, TabularDataset, Iterator, BucketIt
 from transformers import AdamW, DistilBertTokenizer, DistilBertModel
 
 from wsd_model import WSDModel
+from results_plotter import read_dict_file
 
 def wsd(model_name='distilbert-base-uncased',
         classifier_input='token-embedding-last-4-layers', # token-embedding-last-layer / token-embedding-last-n-layers
@@ -19,7 +20,8 @@ def wsd(model_name='distilbert-base-uncased',
         lr=5e-5,
         eps=1e-8,
         n_epochs=100,
-        cache_embeddings=True # If true, the embeddings from the base model are saved to disk so that they only need to be computed once
+        cache_embeddings=True, # If true, the embeddings from the base model are saved to disk so that they only need to be computed once
+        save_classifier=True   # If true, the classifier part of the network is saved after each epoch, and the training is automatically resumed from this saved network if it exists
         ):
     train_path = "wsd_train.txt"
     test_path = "wsd_test_blind.txt"
@@ -136,11 +138,17 @@ def wsd(model_name='distilbert-base-uncased',
         def mask(batch_logits, batch_lemmas):
             return batch_logits
 
+    experiment_name = model_name + " " + classifier_input + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps) + (" cache_embeddings" if cache_embeddings else "")
     model = WSDModel(base_model, n_classes, mask, use_n_last_layers, model_name, classifier_hidden_layers, cache_embeddings)
+    history = None
+    if save_classifier:
+        if model.load_classifier(experiment_name):
+            # Existing saved model loaded
+            # Also load the corresponding training history
+            history = read_dict_file("results/"+experiment_name+".txt")
 
     model.cuda()
 
-    experiment_name = model_name + " " + classifier_input + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps) + (" cache_embeddings" if cache_embeddings else "")
     print("Starting experiment  " + experiment_name)
     if test:
         tst = read_data(test_path, fields, max_len=512)
@@ -170,16 +178,24 @@ def wsd(model_name='distilbert-base-uncased',
         def save_results(history):
             with open("results/" + experiment_name + ".txt", "w") as out:
                 out.write(str(history))
+            if save_classifier:
+                if len(history['val_acc']) == 0 or history['val_acc'][-1] > max(history['val_acc']):
+                    model.save_classifier(experiment_name, best=True)
+                else:
+                    model.save_classifier(experiment_name, best=False)
 
-        train(model, optimizer, trn_iter, vld_iter, n_epochs, save_results)
+        train(model, optimizer, trn_iter, vld_iter, n_epochs, save_results, history)
 
-def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None):
+def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None, history=None):
     def evaluate_validation(scores, gold):
         guesses = scores.argmax(dim=1)
         return (guesses == gold).sum().item()
 
-    history = defaultdict(list)
-    for i in range(n_epochs):
+    if history is not None:
+        history = defaultdict(list, history)
+    else:
+        history = defaultdict(list)
+    for i in range(len(history), n_epochs):
         t0 = time.time()
         loss_sum = 0
         n_batches = 0
