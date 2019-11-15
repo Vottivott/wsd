@@ -30,12 +30,21 @@ def linear(name):
     else:
         return 'linear classifier'
 
+def cls_token(name):
+    if 'cls_token' in name:
+        return "cls token"
+    else:
+        return "relevant token"
+
 
 def plot(fig_index):
     if fig_index==0:
         #plt.title("Linear vs two-layer classifier")
         #plot_results("results_lin", None, lambda s: model_name(s) + " " + linear(s), ['r-', 'g-', 'r--', 'g--','b-','b--'])#,'c-','c--'])
         plot_results("results_lin", None, lambda s: model_name(s) + " " + linear(s), ['r-', 'r--','b-','b--'])#,'c-','c--'])
+    elif fig_index==1:
+        plot_results("results_positional", None, lambda s: model_name(s) + " " + cls_token(s), ['r-', 'r--'])#,'c-','c--'])
+
 
 if __name__ == "__main__":
-    plot(0)
+    plot(1)
