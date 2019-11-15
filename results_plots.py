@@ -44,7 +44,9 @@ def plot(fig_index):
         plot_results("results_lin", None, lambda s: model_name(s) + " " + linear(s), ['r-', 'r--','b-','b--'])#,'c-','c--'])
     elif fig_index==1:
         plot_results("results_positional", None, lambda s: model_name(s) + " " + cls_token(s), ['r-', 'r--'])#,'c-','c--'])
+    elif fig_index==2:
+        plot_results("results_gru", None, lambda s: s, ['r-', 'r--'])#,'c-','c--'])
 
 
 if __name__ == "__main__":
-    plot(1)
+    plot(2)
