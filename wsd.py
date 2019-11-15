@@ -22,6 +22,7 @@ def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
         lr=5e-5,
         eps=1e-8,
         n_epochs=50,
+        cls_token=False,       # If true, the cls token is used instead of the relevant-word token
         cache_embeddings=True, # If true, the embeddings from the base model are saved to disk so that they only need to be computed once
         save_classifier=True   # If true, the classifier part of the network is saved after each epoch, and the training is automatically resumed from this saved network if it exists
         ):
@@ -99,6 +100,8 @@ def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
                 token_position = len(pre_word_tokenized) + 1  # taking into account the later addition of the start token
                 example_id = id_start + i
                 if max_len is None or token_position < max_len-1: # ignore examples where the relevant token is cut off due to max_len
+                    if cls_token:
+                        token_position = 0
                     examples.append(Example.fromlist([sense, lemma, token_position, text, example_id], fields))
                 else:
                     print("Example %d is skipped because the relevant token was cut off (token pos = %d)" % (example_id, token_position))
@@ -148,7 +151,7 @@ def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
         def mask(batch_logits, batch_lemmas):
             return batch_logits
 
-    experiment_name = model_name + " " + (classifier_input if not model_name.startswith('ensemble-distil-') else "") + " " + str(classifier_hidden_layers) + " (" +  (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps) + (" cache_embeddings" if cache_embeddings else "")
+    experiment_name = model_name + " " + (classifier_input if not model_name.startswith('ensemble-distil-') else "") + " " + str(classifier_hidden_layers) + " (" +  (" cls_token" if cls_token else "") + (" reduce_options" if reduce_options else "") + (" freeze_base_model" if reduce_options else "") + "  ) " + "max_len=" + str(max_len) + " batch_size=" + str(batch_size) + " lr="+str(lr) + " eps="+str(eps) + (" cache_embeddings" if cache_embeddings else "")
 
     if model_name.startswith('ensemble-distil-'):
         model = WSDEnsembleModel(last_n_distil, last_n_albert, n_classes, mask, classifier_hidden_layers)
