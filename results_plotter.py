@@ -25,7 +25,10 @@ def plot_results(folder, required_keywords=None, label_fn=None, styles=None, max
             plt.plot(res['val_acc'][:max_epochs])
         final = "%.2f%%" % (100*max(res['val_acc'][:max_epochs]))
         if label_fn is not None:
-            name = label_fn(name)
+            if type(label_fn) == list or type(label_fn) == tuple:
+                name = label_fn[i]
+            else:
+                name = label_fn(name)
         names.append(final + " " + name)
     plt.xlabel("Epoch")
     plt.ylabel("Validation accuracy")

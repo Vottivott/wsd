@@ -11,8 +11,8 @@ from wsd_ensemble_model import WSDEnsembleModel
 from results_plotter import read_dict_file
 
 
-def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1
-        classifier_input='token-embedding-last-4-layers', # token-embedding-last-layer / token-embedding-last-n-layers
+def wsd(model_name='distilbert-base-uncased', #ensemble-distil-1-albert-1 / albert-xxlarge-v2 / bert-base-uncased
+        classifier_input='token-embedding-last-1-layers', # token-embedding-last-layer / token-embedding-last-n-layers
         classifier_hidden_layers=[],
         reduce_options=True,
         freeze_base_model=True,

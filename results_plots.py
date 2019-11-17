@@ -46,7 +46,10 @@ def plot(fig_index):
         plot_results("results_positional", None, lambda s: model_name(s) + " " + cls_token(s), ['r-', 'r--'])#,'c-','c--'])
     elif fig_index==2:
         plot_results("results_gru", None, lambda s: s, ['r-', 'r--'])#,'c-','c--'])
-
+    elif fig_index==3:
+        plot_results("results_finetune", None, ['train. loss: DistilBERT base model frozen', 'train. loss: DistilBERT base model fine-tuned', 'val. loss: DistilBERT base model frozen', 'val. loss: DistilBERT base model fine-tuned'], ['k-', 'k--','r-','r--'])#,'c-','c--'])
+    elif fig_index==4:
+        plot_results("results_overall", None, lambda s: s, None)
 
 if __name__ == "__main__":
-    plot(2)
+    plot(3)

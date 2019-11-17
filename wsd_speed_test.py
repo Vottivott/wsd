@@ -234,9 +234,9 @@ def train(model, optimizer, trn_iter, vld_iter, n_epochs, epoch_callback=None, h
                 if n_batches % 50 == 0:
                     print(f' ({loss_sum / n_batches:.4f})')
 
-        train_loss = loss_sum / n_batches
-        history['train_loss'].append(train_loss)
-        print(f' ({train_loss:.4f})')
+            train_loss = loss_sum / n_batches
+            history['train_loss'].append(train_loss)
+            print(f' ({train_loss:.4f})')
         n_correct = 0
         n_valid = len(vld_iter.dataset)
         loss_sum = 0
